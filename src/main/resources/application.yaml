@@ -6,7 +6,7 @@ spring:
     active: dev
 
   datasource:
-    # Use Docker's IPv4 loopback binding explicitly for local development.
+    # Use Docker's IPv4 loopback binding explicitly for local development
     url: jdbc:postgresql://127.0.0.1:5432/voyanta
     username: ${DB_USERNAME:voyanta}
     password: ${DB_PASSWORD:voyanta}
