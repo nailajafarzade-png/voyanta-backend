@@ -9,6 +9,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * REST Controller that exposes the /api/homepage endpoints. It serves the public "stats"
+ * numbers shown on the landing page and delegates the work to HomepageStatsService.
+ */
 @RestController
 @RequestMapping("/api/homepage")
 @RequiredArgsConstructor

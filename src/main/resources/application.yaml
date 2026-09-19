@@ -3,11 +3,10 @@ spring:
     name: voyanta-backend
 
   profiles:
-    active: dev
+    active: dev,local
 
   datasource:
-    # Use Docker's IPv4 loopback binding explicitly for local development
-    url: jdbc:postgresql://127.0.0.1:5432/voyanta
+    url: jdbc:postgresql://localhost:5432/voyanta
     username: ${DB_USERNAME:voyanta}
     password: ${DB_PASSWORD:voyanta}
     driver-class-name: org.postgresql.Driver
@@ -53,11 +52,11 @@ voyanta:
     refresh-token-ttl: 30d
 
   ai:
-    provider: openai
+    provider: gemini
     api-key: ${AI_API_KEY:}
-    base-url: https://api.openai.com
-    model: gpt-4o
-    timeout: 15s
+    base-url: https://generativelanguage.googleapis.com
+    model: gemini-3.6-flash
+    timeout: 60s
     max-retries: 2
 
   survey:
@@ -71,7 +70,7 @@ voyanta:
   storage:
     provider: s3
     bucket: ${STORAGE_BUCKET:voyanta-images}
-    endpoint: ${STORAGE_ENDPOINT:}
+    endpoint: ${STORAGE_ENDPOINT:}          # R2 üçün doldurulur, real S3-də boş qala bilər
     access-key: ${STORAGE_ACCESS_KEY:}
     secret-key: ${STORAGE_SECRET_KEY:}
     region: ${STORAGE_REGION:auto}
@@ -79,16 +78,18 @@ voyanta:
   oauth:
     google:
       client-id: ${GOOGLE_CLIENT_ID:}
-    apple:
-      client-id: ${APPLE_CLIENT_ID:}
+#    apple:
+#      client-id: ${APPLE_CLIENT_ID:}
 
   homepage:
-    avg-rating: 4.9
+    avg-rating: 4.9        # real reytinq sistemi qurulana qədər sabit — komanda ilə razılaşdırılıb
     stats-cache-ttl: 1h
 
   cors:
     allowed-origins:
       - http://localhost:3000
+      - http://localhost:5173
+      - http://127.0.0.1:5173
       - https://voyanta.az
       - https://www.voyanta.az
 
@@ -120,7 +121,10 @@ spring:
   config:
     activate:
       on-profile: dev
-
+voyanta:
+  rate-limit:
+    anonymous-plans-per-day: 1000
+    authenticated-plans-per-day: 1000
 logging:
   level:
     com.voyanta: DEBUG

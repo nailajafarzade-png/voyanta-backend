@@ -7,6 +7,10 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 
 /**
+ * Redis-based implementation of RateLimiter, registered as a Spring @Component.
+ * It counts requests per key under a "rate:" prefix and lets the request through
+ * while the counter stays inside the given limit and time window.
+ *
  * Redis INCR atomikdir — paralel sorğularda belə race condition yaratmır.
  * Bucket4j kimi kitabxanalar burst/sliding-window ssenariləri üçün daha güclüdür,
  * amma bizim ehtiyac ("gündə N plan") üçün bu, sadə və kifayət qədər dəqiqdir.

@@ -4,6 +4,11 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 
+/**
+ * Static utility class for one-way hashing. It creates a Base64-encoded SHA-256 hash
+ * and is used to hash the client IP address, so anonymous rate-limit keys
+ * do not store the raw IP.
+ */
 public final class HashUtil {
 
     private HashUtil() {}

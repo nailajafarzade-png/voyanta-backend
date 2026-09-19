@@ -13,6 +13,11 @@ import org.hibernate.type.SqlTypes;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * JPA Entity mapped to the "plan.itinerary_days" table. It holds one day of a travel
+ * plan: its day number and the activities stored as JSON, plus a locked flag that hides
+ * the activities from users who have not signed in.
+ */
 @Entity
 @Table(name = "itinerary_days", schema = "plan")
 @Getter

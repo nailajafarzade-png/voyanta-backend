@@ -10,6 +10,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Global exception handler (@RestControllerAdvice) for all Voyanta REST controllers.
+ * It converts ApiException, request validation errors and unexpected exceptions
+ * into a consistent ApiResponse body with the right HTTP status.
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 

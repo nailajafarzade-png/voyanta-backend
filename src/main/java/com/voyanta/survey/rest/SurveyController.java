@@ -1,7 +1,6 @@
-package com.voyanta.survey.rest;
+package com.voyanta.survey.controller;
 
 import com.voyanta.common.dto.ApiResponse;
-
 import com.voyanta.survey.dto.request.UpdateSurveyRequest;
 import com.voyanta.survey.dto.response.SurveySession;
 import com.voyanta.survey.service.SurveySessionService;

@@ -4,12 +4,9 @@ import com.voyanta.auth.dao.entity.RefreshToken;
 import com.voyanta.auth.dao.entity.User;
 import com.voyanta.auth.dao.repository.RefreshTokenRepository;
 import com.voyanta.auth.dao.repository.UserRepository;
-import com.voyanta.auth.dto.request.LoginRequest;
 import com.voyanta.auth.dto.request.RefreshRequest;
-import com.voyanta.auth.dto.request.RegisterRequest;
 import com.voyanta.auth.dto.response.AuthResponse;
 import com.voyanta.auth.dto.response.UserSummary;
-import com.voyanta.auth.enums.AuthProvider;
 import com.voyanta.common.config.VoyantaProperties;
 import com.voyanta.common.exception.ApiException;
 import com.voyanta.common.security.JwtService;
@@ -31,39 +28,47 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
-    private final PasswordEncoder passwordEncoder;
+    // MÜVƏQQƏTİ İSTİFADƏ OLUNMUR — yalnız register()/login() bunu çağırırdı, ikisi də kommentdədir.
+    // Email/şifrə qaytarılsa, aşağını da geri aç.
+    // private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final VoyantaProperties properties;
 
-    @Transactional
-    public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
-            throw new ApiException(HttpStatus.CONFLICT, "EMAIL_TAKEN", "Bu e-poçt artıq qeydiyyatdan keçib");
-        }
-
-        User user = User.builder()
-                .fullName(request.fullName())
-                .email(request.email())
-                .phone(request.phone())
-                .passwordHash(passwordEncoder.encode(request.password()))
-                .provider(AuthProvider.LOCAL)
-                .build();
-
-        userRepository.save(user);
-        return issueTokens(user);
-    }
-
-    @Transactional
-    public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "E-poçt və ya şifrə yanlışdır"));
-
-        if (user.getPasswordHash() == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "E-poçt və ya şifrə yanlışdır");
-        }
-
-        return issueTokens(user);
-    }
+    /*
+     * MÜVƏQQƏTİ SÖNDÜRÜLÜB — qeydiyyat hazırda yalnız Google ilədir (AuthController-də
+     * /register və /login endpoint-ləri də kommentdədir). Geri açanda passwordEncoder
+     * field-ini də yuxarıda geri aç.
+     *
+     * @Transactional
+     * public AuthResponse register(RegisterRequest request) {
+     *     if (userRepository.existsByEmail(request.email())) {
+     *         throw new ApiException(HttpStatus.CONFLICT, "EMAIL_TAKEN", "Bu e-poçt artıq qeydiyyatdan keçib");
+     *     }
+     *
+     *     User user = User.builder()
+     *             .fullName(request.fullName())
+     *             .email(request.email())
+     *             .phone(request.phone())
+     *             .passwordHash(passwordEncoder.encode(request.password()))
+     *             .provider(AuthProvider.LOCAL)
+     *             .build();
+     *
+     *     userRepository.save(user);
+     *     return issueTokens(user);
+     * }
+     *
+     * @Transactional
+     * public AuthResponse login(LoginRequest request) {
+     *     User user = userRepository.findByEmail(request.email())
+     *             .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "E-poçt və ya şifrə yanlışdır"));
+     *
+     *     if (user.getPasswordHash() == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+     *         throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "E-poçt və ya şifrə yanlışdır");
+     *     }
+     *
+     *     return issueTokens(user);
+     * }
+     */
 
     @Transactional
     public AuthResponse refresh(RefreshRequest request) {

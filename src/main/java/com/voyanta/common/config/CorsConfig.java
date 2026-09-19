@@ -9,6 +9,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
+/**
+ * Configuration class that builds the CORS rules for the API. Allowed origins are read
+ * from VoyantaProperties (application.yaml), so the Voyanta web frontend can call the
+ * backend with credentials.
+ */
 @Configuration
 @RequiredArgsConstructor
 public class CorsConfig {

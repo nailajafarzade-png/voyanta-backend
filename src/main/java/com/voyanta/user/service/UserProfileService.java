@@ -14,6 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 
 /**
+ * Service responsible for reading and updating a user's profile. It loads the user by id
+ * through the auth module's repository, saves the new name and phone, and returns the
+ * data as a UserProfileResponse.
+ *
  * Diqqət: auth.repository.UserRepository birbaşa istifadə olunur — bu icazəlidir,
  * repository-lər modullar arasında paylaşıla bilər. Amma auth.service.AuthService
  * heç vaxt bura import olunmayacaq — autentifikasiya məntiqi yalnız auth-un işidir,

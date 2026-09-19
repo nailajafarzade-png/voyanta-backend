@@ -1,10 +1,8 @@
 package com.voyanta.auth.rest;
 
 
-import com.voyanta.auth.dto.request.LoginRequest;
 import com.voyanta.auth.dto.request.OAuthLoginRequest;
 import com.voyanta.auth.dto.request.RefreshRequest;
-import com.voyanta.auth.dto.request.RegisterRequest;
 import com.voyanta.auth.dto.response.AuthResponse;
 import com.voyanta.auth.service.AuthService;
 import com.voyanta.auth.service.OAuthService;
@@ -25,15 +23,21 @@ public class AuthController {
     private final AuthService authService;
     private final OAuthService oAuthService;
 
-    @PostMapping("/register")
-    public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok(authService.register(request)));
-    }
-
-    @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok(authService.login(request)));
-    }
+    /*
+     * MÜVƏQQƏTİ SÖNDÜRÜLÜB — qeydiyyat/giriş hazırda yalnız Google ilədir.
+     * Email/şifrə qaytarılsa, bu iki endpoint-i açmaq kifayətdir (AuthService.register/login
+     * hələ mövcuddur, onlar da kommentdədir — bax AuthService.java).
+     *
+     * @PostMapping("/register")
+     * public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
+     *     return ResponseEntity.ok(ApiResponse.ok(authService.register(request)));
+     * }
+     *
+     * @PostMapping("/login")
+     * public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
+     *     return ResponseEntity.ok(ApiResponse.ok(authService.login(request)));
+     * }
+     */
 
     @PostMapping("/oauth/{provider}")
     public ResponseEntity<ApiResponse<AuthResponse>> oauth(

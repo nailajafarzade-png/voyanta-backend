@@ -13,6 +13,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+/**
+ * REST Controller that exposes the /api/users endpoints for the signed-in user's own
+ * profile: reading it and updating it. The user id always comes from the security
+ * context, so nobody can read or change another account.
+ */
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor

@@ -21,6 +21,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * JPA Entity mapped to the "plan.travel_plans" table. It stores one generated travel
+ * plan: the chosen destination, dates, companion, interests, budget summary, generation
+ * status and its itinerary days. The user id stays null while the plan is anonymous.
+ */
 @Entity
 @Table(name = "travel_plans", schema = "plan")
 @Getter

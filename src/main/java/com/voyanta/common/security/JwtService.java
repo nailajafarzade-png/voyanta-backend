@@ -12,6 +12,10 @@ import java.util.Date;
 import java.util.UUID;
 
 /**
+ * Service responsible for JWT handling: it creates access and refresh tokens for a user id,
+ * validates them and reads the user id back out. Secret and token lifetimes come from
+ * VoyantaProperties.
+ *
  * Tokenin daxili detallarını (algoritm, secret) yalnız bu class bilir.
  * auth modulu bunu çağırır, amma necə işlədiyini bilmir.
  */

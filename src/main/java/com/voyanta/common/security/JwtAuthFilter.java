@@ -31,19 +31,22 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
 
         if (header == null || !header.startsWith("Bearer ")) {
-            // Token yoxdur — anonim istifadəçi ola bilər, public endpoint-lərdə problem deyil.
-            // authenticated tələb edən endpoint-lərdə SecurityConfig özü rədd edəcək.
             filterChain.doFilter(request, response);
             return;
         }
 
         String token = header.substring(7);
 
-        if (jwtService.isTokenValid(token)) {
-            UUID userId = jwtService.extractUserId(token);
-
-            var authentication = new UsernamePasswordAuthenticationToken(userId, null, List.of());
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+        try {
+            if (jwtService.isTokenValid(token)) {
+                UUID userId = jwtService.extractUserId(token);
+                var authentication =
+                        new UsernamePasswordAuthenticationToken(userId, null, List.of());
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
+        } catch (Exception ignored) {
+            // Səhv token — anonim davam et, 403 yazma
+            SecurityContextHolder.clearContext();
         }
 
         filterChain.doFilter(request, response);

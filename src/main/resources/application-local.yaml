@@ -1,0 +1,7 @@
+# Lokal konfiqurasiya. .gitignore-dadır, commit olunmur.
+voyanta:
+  ai:
+    api-key: AQ.Ab8RN6KjO9v7UZfrnizFEwXEuvtFwXfBR8NMfvD7qec_nvGUyA
+  oauth:
+    google:
+      client-id: 271303617766-v851cofvnc2t6qn2cee2minseps0h4pj.apps.googleusercontent.com

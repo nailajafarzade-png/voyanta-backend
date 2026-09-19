@@ -12,6 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+/**
+ * Service that attaches a plan created anonymously to a real user account after sign-in.
+ * It refuses plans that already belong to someone else, and unlocks all itinerary days
+ * once the plan is claimed.
+ */
 @Service
 @RequiredArgsConstructor
 public class PlanClaimService {

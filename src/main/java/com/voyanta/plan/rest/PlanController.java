@@ -20,6 +20,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+/**
+ * REST Controller that exposes the /api/plans endpoints: start generation, poll status,
+ * read a plan and claim it after sign-in. It also builds the rate-limit key, using the
+ * user id when signed in and a hashed client IP otherwise.
+ */
 @RestController
 @RequestMapping("/api/plans")
 @RequiredArgsConstructor

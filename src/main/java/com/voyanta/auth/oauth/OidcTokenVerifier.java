@@ -13,6 +13,10 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 /**
+ * Shared helper that validates an OIDC ID token against a provider's issuer, JWKS keys
+ * and client id, then returns the user claims as a VerifiedOidcUser. Invalid tokens are
+ * rejected with an "INVALID_OAUTH_TOKEN" ApiException.
+ *
  * Google və Apple hər ikisi OIDC-uyğun provider olduğu üçün ID token doğrulaması
  * eyni məntiqdir — fərqlənən yalnız issuer, JWKS URL-i və client ID-dir.
  * Bu, GoogleTokenVerifier/AppleTokenVerifier tərəfindən konfiqurasiya olunub istifadə edilir.

@@ -6,6 +6,11 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * Service that decides which itinerary days a user may see. Signed-in users get every
+ * day unlocked, while anonymous users only keep the first two days open and the rest
+ * locked.
+ */
 @Service
 public class PlanLockingService {
 

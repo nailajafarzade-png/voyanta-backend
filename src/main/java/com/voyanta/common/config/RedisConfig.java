@@ -10,6 +10,11 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+/**
+ * Configuration class that provides the RedisTemplate bean used for caching,
+ * survey sessions and rate-limit counters. Keys are stored as plain strings and values
+ * as JSON, with java.time types (such as LocalDate) serialized in readable form.
+ */
 @Configuration
 public class RedisConfig {
 

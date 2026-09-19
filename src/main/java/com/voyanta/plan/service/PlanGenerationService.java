@@ -17,6 +17,7 @@ import com.voyanta.plan.enums.PlanStatus;
 import com.voyanta.survey.dto.response.SurveySession;
 import com.voyanta.survey.service.SurveySessionService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
@@ -29,6 +30,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PlanGenerationService {
 
     private static final String PROGRESS_KEY_PREFIX = "plan:progress:";
@@ -46,7 +48,12 @@ public class PlanGenerationService {
         // 1) Idempotency ƏVVƏL yoxlanılır — təkrar sorğu rate-limit büdcəsini yeməsin
         TravelPlan existing = planRepository.findByAnonymousSessionId(surveySessionId).orElse(null);
         if (existing != null) {
-            return existing;
+            if (existing.getStatus() != PlanStatus.FAILED) {
+                return existing;
+            }
+            // Uğursuz plan: silib yenidən başlayırıq
+            planRepository.delete(existing);
+            planRepository.flush();
         }
 
         SurveySession survey = surveySessionService.get(surveySessionId);
@@ -83,7 +90,8 @@ public class PlanGenerationService {
 
             AiRequest request = new AiRequest(
                     survey.interests(), survey.companion(), survey.familyDetails(),
-                    survey.budget(), survey.dates()
+                    survey.budget(), survey.dates(),
+                    survey.hotelType(), survey.mealPreference(), survey.tripPurpose()
             );
 
             updateStage(planId, GenerationStage.SELECTING_PLACES);
@@ -94,6 +102,7 @@ public class PlanGenerationService {
 
             updateStage(planId, GenerationStage.DONE);
         } catch (Exception e) {
+            log.error("Plan generasiyası uğursuz oldu, planId={}", planId, e);
             markFailed(planId);
         }
     }
@@ -132,7 +141,9 @@ public class PlanGenerationService {
 
     private void validateComplete(SurveySession survey) {
         if (survey.interests() == null || survey.interests().isEmpty()
-                || survey.companion() == null || survey.budget() == null || survey.dates() == null) {
+                || survey.companion() == null || survey.budget() == null || survey.dates() == null
+                || survey.hotelType() == null || survey.mealPreference() == null
+                || survey.tripPurpose() == null || survey.tripPurpose().isEmpty()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "SURVEY_INCOMPLETE", "Sorğu tam doldurulmayıb");
         }
     }

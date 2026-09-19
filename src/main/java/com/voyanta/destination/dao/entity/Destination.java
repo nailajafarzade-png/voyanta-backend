@@ -14,6 +14,11 @@ import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * JPA Entity mapped to the "destination.destinations" table. It stores one travel
+ * destination that can be shown as a card (name, country, image, tag), plus the interest
+ * tags used to match it to a user and a flag marking it as featured.
+ */
 @Entity
 @Table(name = "destinations", schema = "destination")
 @Getter

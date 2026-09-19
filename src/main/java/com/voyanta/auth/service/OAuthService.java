@@ -15,6 +15,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 
+/**
+ * Service that handles social sign-in with Google and Apple. It picks the verifier for
+ * the given provider, validates the ID token, creates the user on first login or reuses
+ * the existing one by email, and then asks AuthService to issue the tokens.
+ */
 @Service
 @RequiredArgsConstructor
 public class OAuthService {

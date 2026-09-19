@@ -4,6 +4,11 @@ import com.voyanta.survey.enums.DurationType;
 
 import java.time.LocalDate;
 
+/**
+ * Shared DTO for the travel timing answer. It holds either exact start and end dates or
+ * an approximate duration, and its constructor rejects any input that sets both or
+ * neither.
+ */
 public record TravelDates(
         LocalDate startDate,
         LocalDate endDate,

@@ -32,8 +32,11 @@ public class User {
 
     private String phone;
 
-    // Google/Apple ilə qeydiyyatda boş qalır
-    private String passwordHash;
+    // MÜVƏQQƏTİ İSTİFADƏ OLUNMUR — qeydiyyat yalnız Google ilədir. DB-də `password_hash`
+    // sütunu qalır (silinməyib), sadəcə Java tərəfi artıq buna yazmır/oxumur. Hibernate
+    // `ddl-auto: validate` DB-də əlavə/mapping olunmamış sütuna görə xəta vermir, ona görə
+    // yeni migration lazım deyil.
+    // private String passwordHash;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

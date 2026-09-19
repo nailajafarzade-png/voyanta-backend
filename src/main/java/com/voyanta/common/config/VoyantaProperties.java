@@ -10,6 +10,10 @@ import java.time.Duration;
 import java.util.List;
 
 /**
+ * Type-safe configuration properties class bound to the "voyanta:" block of application.yaml.
+ * It groups the app settings: JWT, AI provider, survey session TTL, rate limits,
+ * file storage, OAuth client ids, homepage values and allowed CORS origins.
+ *
  * application.yml-dəki "voyanta:" bloku ilə eyni struktur.
  * Hər yerdə @Value("${...}") səpələmək əvəzinə, bunu inject edib
  * properties.getJwt().getSecret() kimi tipli şəkildə istifadə edirik.
@@ -29,6 +33,7 @@ public class VoyantaProperties {
     private Homepage homepage = new Homepage();
     private Cors cors = new Cors();
 
+    /** Holds the JWT signing secret and the lifetimes of access and refresh tokens. */
     @Getter
     @Setter
     public static class Jwt {
@@ -37,6 +42,7 @@ public class VoyantaProperties {
         private Duration refreshTokenTtl;
     }
 
+    /** Holds the AI provider settings used for plan generation: API key, base URL, model, timeout and retry count. */
     @Getter
     @Setter
     public static class Ai {
@@ -48,12 +54,14 @@ public class VoyantaProperties {
         private int maxRetries;
     }
 
+    /** Holds how long an unfinished survey session stays alive in Redis. */
     @Getter
     @Setter
     public static class Survey {
         private Duration sessionTtl;
     }
 
+    /** Holds the request limits: daily plans for anonymous and authenticated users, plus the global AI calls per minute. */
     @Getter
     @Setter
     public static class RateLimit {
@@ -62,6 +70,7 @@ public class VoyantaProperties {
         private int aiRequestsPerMinuteGlobal;
     }
 
+    /** Holds the S3-compatible object storage settings (bucket, endpoint, keys, region) used for images. */
     @Getter
     @Setter
     public static class Storage {
@@ -73,18 +82,21 @@ public class VoyantaProperties {
         private String region;
     }
 
+    /** Groups the client ids of the social login providers used for sign-in. */
     @Getter
     @Setter
     public static class OAuth {
         private Google google = new Google();
         private Apple apple = new Apple();
 
+        /** Holds the Google OAuth client id used to verify Google sign-in tokens. */
         @Getter
         @Setter
         public static class Google {
             private String clientId;
         }
 
+        /** Holds the Apple OAuth client id used to verify Apple sign-in tokens. */
         @Getter
         @Setter
         public static class Apple {
@@ -92,6 +104,7 @@ public class VoyantaProperties {
         }
     }
 
+    /** Holds the homepage values: the displayed average rating and how long homepage stats are cached. */
     @Getter
     @Setter
     public static class Homepage {
@@ -101,6 +114,7 @@ public class VoyantaProperties {
         private Duration statsCacheTtl;
     }
 
+    /** Holds the list of frontend origins that are allowed to call the API; read by CorsConfig. */
     @Getter
     @Setter
     public static class Cors {

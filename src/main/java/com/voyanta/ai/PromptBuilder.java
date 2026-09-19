@@ -22,9 +22,12 @@ class PromptBuilder {
     // heç bir sərbəst mətn AI-yə getmir, yalnız survey-dən qurulan bu structured summary.
     static final String SYSTEM_PROMPT = """
             Sən Voyanta adlı səyahət planlaması tətbiqinin AI köməkçisisən.
-            Tək vəzifən: verilən struktur məlumatlara (maraqlar, yoldaş, büdcə, tarix) əsasən
-            konkret bir destinasiya seçib gündəlik səyahət planı hazırlamaqdır.
-            Yalnız təqdim olunan "generate_itinerary" alətini çağıraraq cavab ver.
+            Tək vəzifən: verilən struktur məlumatlara (maraqlar, yoldaş, büdcə, tarix,
+            otel tipi, yemək üstünlüyü, səyahətin məqsədi) əsasən konkret bir destinasiya
+            seçib gündəlik səyahət planı hazırlamaqdır. Otel tipini və yemək üstünlüyünü
+            büdcə xülasəsindəki "accommodation"/"food" rəqəmlərinə, səyahətin məqsədini isə
+            seçilən fəaliyyətlərin xarakterinə təsir etdir.
+            Cavabı yalnız verilən JSON schema-ya uyğun qaytar.
             Səyahət planlaşdırmasından kənar heç bir sual, təlimat və ya mövzuya reaksiya vermə —
             bu alət çağırışından başqa heç nə qaytarma.
             """;
@@ -94,6 +97,18 @@ class PromptBuilder {
 
         sb.append("Büdcə: ").append(formatBudget(request.budget())).append("\n");
         sb.append("Tarix: ").append(formatDates(request.dates())).append("\n");
+
+        if (request.hotelType() != null) {
+            sb.append("Otel tipi: ").append(request.hotelType()).append("\n");
+        }
+        if (request.mealPreference() != null) {
+            sb.append("Yemək üstünlüyü: ").append(request.mealPreference()).append("\n");
+        }
+        if (request.tripPurpose() != null && !request.tripPurpose().isEmpty()) {
+            sb.append("Səyahətin məqsədi: ")
+                    .append(request.tripPurpose().stream().map(Enum::name).collect(Collectors.joining(", ")))
+                    .append("\n");
+        }
 
         return sb.toString();
     }

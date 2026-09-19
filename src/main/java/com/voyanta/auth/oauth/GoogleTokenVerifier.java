@@ -4,6 +4,11 @@ import com.voyanta.common.config.VoyantaProperties;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 
+/**
+ * Client component that verifies Google Sign-In ID tokens. It configures the shared
+ * OidcTokenVerifier with Google's issuer and JWKS URL plus the configured client id,
+ * and is only created when a Google client id is set in the configuration.
+ */
 @Component("google")
 @ConditionalOnExpression("'${voyanta.oauth.google.client-id:}'.trim().length() > 0")
 class GoogleTokenVerifier implements ProviderTokenVerifier {

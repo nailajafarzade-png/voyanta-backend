@@ -10,6 +10,11 @@ import lombok.Setter;
 import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * JPA Entity mapped to the "auth.refresh_tokens" table. Each row is one issued refresh
+ * token for a user, kept only as a SHA-256 hash together with its expiry time and a
+ * revoked flag, so used or rotated tokens can no longer be reused.
+ */
 @Entity
 @Table(name = "refresh_tokens", schema = "auth")
 @Getter

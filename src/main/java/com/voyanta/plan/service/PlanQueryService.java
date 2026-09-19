@@ -20,6 +20,11 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * Service responsible for reading plans. It builds the polling status with a progress
+ * message, and returns the full plan while hiding the activities of locked days from
+ * anyone who does not own the plan.
+ */
 @Service
 @RequiredArgsConstructor
 public class PlanQueryService {

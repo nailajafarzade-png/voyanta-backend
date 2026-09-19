@@ -4,6 +4,11 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
+/**
+ * Generic response DTO used as the envelope for every Voyanta API response.
+ * It wraps the payload together with a success flag and, on failure, an error
+ * message and error code. Use ok(...) for success and error(...) for failures.
+ */
 @Getter
 @Builder
 @AllArgsConstructor
