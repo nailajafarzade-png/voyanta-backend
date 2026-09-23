@@ -64,8 +64,8 @@ public class PlanQueryService {
     }
 
     private ItineraryDayResponse toDayResponse(ItineraryDay day, boolean canSeeAll) {
-        boolean visible = canSeeAll || !day.isLocked();
-        return new ItineraryDayResponse(day.getDayNumber(), day.isLocked(), visible ? day.getItems() : null);
+        boolean locked = day.isLocked() && !canSeeAll;
+        return new ItineraryDayResponse(day.getDayNumber(), locked, locked ? null : day.getItems());
     }
 
     private TravelPlan findPlan(UUID planId) {

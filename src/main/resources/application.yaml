@@ -56,8 +56,8 @@ voyanta:
     api-key: ${AI_API_KEY:}
     base-url: https://generativelanguage.googleapis.com
     model: gemini-3.6-flash
-    timeout: 60s
-    max-retries: 2
+    timeout: 600s
+    max-retries: 5
 
   survey:
     session-ttl: 30m
