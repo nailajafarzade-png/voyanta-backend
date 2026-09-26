@@ -24,6 +24,7 @@ public class SecurityConfig {
             "/api/survey/**",
             "/api/plans/generate",
             "/api/plans/*/status",
+            "/api/plans/*/claim",
             "/api/plans/*",
             "/api/destinations/**",
             "/api/homepage/**",

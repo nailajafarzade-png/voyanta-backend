@@ -52,19 +52,19 @@ voyanta:
     refresh-token-ttl: 30d
 
   ai:
-    provider: gemini
+    provider: openai
     api-key: ${AI_API_KEY:}
-    base-url: https://generativelanguage.googleapis.com
-    model: gemini-3.6-flash
-    timeout: 600s
-    max-retries: 5
+    base-url: https://api.openai.com
+    model: gpt-4o          # komanda ilə dəqiqləşdir — hesabınızın çıxışı olan model
+    timeout: 15s
+    max-retries: 2
 
   survey:
     session-ttl: 30m
 
   rate-limit:
-    anonymous-plans-per-day: 1
-    authenticated-plans-per-day: 10
+    anonymous-plans-per-day: 2
+    authenticated-plans-per-day: 5
     ai-requests-per-minute-global: 60
 
   storage:

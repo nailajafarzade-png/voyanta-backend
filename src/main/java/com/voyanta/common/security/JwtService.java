@@ -50,6 +50,7 @@ public class JwtService {
         Date expiry = new Date(now.getTime() + ttlMillis);
 
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())   // <-- jti, hər çağırışda unikal
                 .subject(userId.toString())
                 .claim("type", type)
                 .issuedAt(now)

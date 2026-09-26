@@ -1,7 +1,7 @@
 # Lokal konfiqurasiya. .gitignore-dadır, commit olunmur.
 voyanta:
   ai:
-    api-key: AQ.Ab8RN6J42emQkBijEZqHXT-BF_-l1HnxWdwaAduUJ33208te9w
+    api-key: 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
   oauth:
     google:
       client-id: 271303617766-v851cofvnc2t6qn2cee2minseps0h4pj.apps.googleusercontent.com

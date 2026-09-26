@@ -2,6 +2,7 @@ package com.voyanta.auth.oauth;
 
 import com.voyanta.common.config.VoyantaProperties;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Component;
  * and is only created when a Google client id is set in the configuration.
  */
 @Component("google")
+@Profile("!test")
 @ConditionalOnExpression("'${voyanta.oauth.google.client-id:}'.trim().length() > 0")
 class GoogleTokenVerifier implements ProviderTokenVerifier {
 
