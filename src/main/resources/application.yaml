@@ -82,7 +82,7 @@ voyanta:
 #      client-id: ${APPLE_CLIENT_ID:}
 
   homepage:
-    avg-rating: 4.9        # real reytinq sistemi qurulana qədər sabit — komanda ilə razılaşdırılıb
+    avg-rating: 4.9
     stats-cache-ttl: 1h
 
   cors:
