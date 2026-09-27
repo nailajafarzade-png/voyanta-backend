@@ -19,9 +19,11 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -75,10 +77,21 @@ public abstract class AbstractIntegrationTest {
     @BeforeEach
     void resetAiStub() {
         fakeAiPlanGenerator.reset();
+        // The OAuth failure mode is static state on the shared verifier stub; leaving it
+        // set would make an unrelated test see a 503 and fail confusingly.
+        FakeGoogleTokenVerifier.reset();
     }
 
+    /**
+     * Reads the response body as JSON.
+     *
+     * The charset is passed explicitly because MockHttpServletResponse.getContentAsString()
+     * falls back to ISO-8859-1, while Jackson writes UTF-8 bytes (which is what RFC 8259
+     * mandates for application/json, and what every real client assumes). Without this, the
+     * Azerbaijani characters in user-facing messages come back as mojibake in tests only.
+     */
     protected JsonNode json(MvcResult result) throws Exception {
-        return objectMapper.readTree(result.getResponse().getContentAsString());
+        return objectMapper.readTree(result.getResponse().getContentAsString(StandardCharsets.UTF_8));
     }
 
     protected MockHttpServletRequestBuilder withAuth(MockHttpServletRequestBuilder builder, String accessToken) {
@@ -153,6 +166,49 @@ public abstract class AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn();
         return json(result).path("data");
+    }
+
+    /**
+     * Polls the plan status endpoint until the plan reaches a terminal state
+     * (READY or FAILED).
+     *
+     * Generation runs on a background executor (see PlanGenerationWorker), so a test
+     * can no longer assume the plan is finished the moment POST /generate returns 202.
+     * Tests that only need "generate was accepted" do not need this helper.
+     */
+    protected JsonNode awaitPlanStatus(UUID planId, long timeoutMillis) throws Exception {
+        long deadline = System.currentTimeMillis() + timeoutMillis;
+        JsonNode last = null;
+
+        while (System.currentTimeMillis() < deadline) {
+            MvcResult result = mockMvc.perform(get("/api/plans/" + planId + "/status"))
+                    .andExpect(status().isOk())
+                    .andReturn();
+            last = json(result).path("data");
+            String value = last.path("status").asText();
+            if ("READY".equals(value) || "FAILED".equals(value)) {
+                return last;
+            }
+            Thread.sleep(50);
+        }
+
+        throw new AssertionError("Plan " + planId + " terminal status-a keçmədi, son status: " + last);
+    }
+
+    protected JsonNode awaitPlanReady(UUID planId) throws Exception {
+        JsonNode status = awaitPlanStatus(planId, 15_000);
+        assertThat(status.path("status").asText())
+                .withFailMessage("Plan gözlənilən vaxt ərzində READY olmadı, status=%s", status)
+                .isEqualTo("READY");
+        return status;
+    }
+
+    protected JsonNode awaitPlanFailed(UUID planId) throws Exception {
+        JsonNode status = awaitPlanStatus(planId, 15_000);
+        assertThat(status.path("status").asText())
+                .withFailMessage("Plan gözlənilən vaxt ərzində FAILED olmadı, status=%s", status)
+                .isEqualTo("FAILED");
+        return status;
     }
 
     protected String uniqueIp() {

@@ -1,5 +1,6 @@
 package com.voyanta.plan.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.voyanta.common.exception.ResourceNotFoundException;
 import com.voyanta.plan.dao.entity.ItineraryDay;
 import com.voyanta.plan.dao.entity.TravelPlan;
@@ -12,6 +13,7 @@ import com.voyanta.plan.enums.GenerationStage;
 import com.voyanta.plan.enums.PlanStatus;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,12 +29,14 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PlanQueryService {
 
     private static final String PROGRESS_KEY_PREFIX = "plan:progress:";
 
     private final TravelPlanRepository planRepository;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final ObjectMapper objectMapper;
 
     public PlanStatusResponse getStatus(UUID planId) {
         TravelPlan plan = findPlan(planId);
@@ -41,8 +45,35 @@ public class PlanQueryService {
             return new PlanStatusResponse(plan.getStatus(), null, messageFor(plan.getStatus(), null));
         }
 
-        GenerationStage stage = (GenerationStage) redisTemplate.opsForValue().get(PROGRESS_KEY_PREFIX + planId);
+        GenerationStage stage = readStage(PROGRESS_KEY_PREFIX + planId);
         return new PlanStatusResponse(plan.getStatus(), stage, messageFor(plan.getStatus(), stage));
+    }
+
+    /**
+     * Reads the progress stage back from Redis.
+     *
+     * Redis value is written as JSON by GenericJackson2JsonRedisSerializer, so on the way
+     * back it arrives as a String (or a Map), NOT as a GenerationStage instance. A direct
+     * cast therefore throws ClassCastException and the status endpoint returns 500.
+     *
+     * This was previously masked: generation ran synchronously on the request thread, so
+     * a plan was already READY/FAILED by the time anybody polled its status and this
+     * GENERATING branch was never hit. Now that generation is properly asynchronous this
+     * is the normal path — the frontend polls while the plan is still building — so the
+     * conversion has to be done explicitly. Same approach as SurveySessionService.get().
+     */
+    private GenerationStage readStage(String key) {
+        Object value = redisTemplate.opsForValue().get(key);
+        if (value == null) {
+            return null;
+        }
+        try {
+            return objectMapper.convertValue(value, GenerationStage.class);
+        } catch (IllegalArgumentException e) {
+            // Yarım yazılmış/naməlum dəyər status sorğusunu çökmətməlidir.
+            log.warn("Plan progress key-i oxunmadı: {}", key, e);
+            return null;
+        }
     }
 
     @Transactional(readOnly = true)

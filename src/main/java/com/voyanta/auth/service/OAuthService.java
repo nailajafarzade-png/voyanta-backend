@@ -9,6 +9,7 @@ import com.voyanta.auth.oauth.ProviderTokenVerifier;
 import com.voyanta.auth.oauth.VerifiedOidcUser;
 import com.voyanta.common.exception.ApiException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ import java.util.Map;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OAuthService {
 
     // Spring "google"/"apple" bean adlarına görə map-i avtomatik doldurur —
@@ -34,6 +36,12 @@ public class OAuthService {
     public AuthResponse login(String provider, OAuthLoginRequest request) {
         ProviderTokenVerifier verifier = verifiers.get(provider);
         if (verifier == null) {
+            // Bu, ən çox rast gəlinən production səhvi: provider bean-i yoxdur,
+            // çünki GOOGLE_CLIENT_ID mühit dəyişəni oxunmamış ola bilər. Səbəbi
+            // loglayırdıq ki, "UNKNOWN_PROVIDER" görəndə nəyin axtarıldığı bəllə olsun.
+            log.warn("OAuth provider '{}' üçün verifier yoxdur. Aktiv provider-lər: {}. "
+                            + "voyanta.oauth.{}.client-id mühit dəyişəni düzgün təyin olunub?",
+                    provider, verifiers.keySet(), provider.toLowerCase());
             throw new ApiException(HttpStatus.BAD_REQUEST, "UNKNOWN_PROVIDER", "Naməlum provider: " + provider);
         }
 

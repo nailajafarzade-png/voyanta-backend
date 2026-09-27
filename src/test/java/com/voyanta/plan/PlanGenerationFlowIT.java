@@ -25,10 +25,8 @@ class PlanGenerationFlowIT extends AbstractIntegrationTest {
         String sessionId = completeSurvey(createSurveySession().path("sessionId").asText());
         UUID planId = generatePlan(sessionId, null, uniqueIp());
 
-        JsonNode status = json(mockMvc.perform(get("/api/plans/" + planId + "/status"))
-                .andExpect(status().isOk())
-                .andReturn()).path("data");
-        assertThat(status.path("status").asText()).isEqualTo("READY");
+        // Generation is asynchronous now, so poll until the plan reaches a terminal state.
+        JsonNode status = awaitPlanReady(planId);
         assertThat(status.path("message").asText()).isEqualTo("Planın hazırdır");
 
         JsonNode plan = json(mockMvc.perform(get("/api/plans/" + planId))
@@ -97,18 +95,12 @@ class PlanGenerationFlowIT extends AbstractIntegrationTest {
         fakeAiPlanGenerator.failNextCalls();
         UUID failedId = generatePlan(sessionId, null, ip);
 
-        JsonNode failedStatus = json(mockMvc.perform(get("/api/plans/" + failedId + "/status"))
-                .andExpect(status().isOk())
-                .andReturn()).path("data");
-        assertThat(failedStatus.path("status").asText()).isEqualTo("FAILED");
+        awaitPlanFailed(failedId);
 
         fakeAiPlanGenerator.reset();
         UUID retriedId = generatePlan(sessionId, null, ip);
         assertThat(retriedId).isNotEqualTo(failedId);
-        JsonNode ready = json(mockMvc.perform(get("/api/plans/" + retriedId + "/status"))
-                .andExpect(status().isOk())
-                .andReturn()).path("data");
-        assertThat(ready.path("status").asText()).isEqualTo("READY");
+        awaitPlanReady(retriedId);
         assertThat(travelPlanRepository.findById(failedId)).isEmpty();
     }
 
@@ -135,6 +127,7 @@ class PlanGenerationFlowIT extends AbstractIntegrationTest {
         String token = auth.path("accessToken").asText();
         String sessionId = completeSurvey(createSurveySession().path("sessionId").asText());
         UUID planId = generatePlan(sessionId, token, uniqueIp());
+        awaitPlanReady(planId);
 
         JsonNode plan = json(mockMvc.perform(withAuth(get("/api/plans/" + planId), token))
                 .andExpect(status().isOk())
@@ -149,6 +142,7 @@ class PlanGenerationFlowIT extends AbstractIntegrationTest {
     void claimAttachesAnonymousPlanAndUnlocksDays() throws Exception {
         String sessionId = completeSurvey(createSurveySession().path("sessionId").asText());
         UUID planId = generatePlan(sessionId, null, uniqueIp());
+        awaitPlanReady(planId);
 
         mockMvc.perform(post("/api/plans/" + planId + "/claim"))
                 .andExpect(status().isUnauthorized())

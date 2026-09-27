@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -34,7 +35,9 @@ class HomepageStatsIT extends AbstractIntegrationTest {
         assertThat(first.path("avgRating").decimalValue()).isEqualByComparingTo(new BigDecimal("4.9"));
         assertThat(redisTemplate.opsForValue().get("homepage:stats")).isNotNull();
 
-        generatePlan(completeSurvey(createSurveySession().path("sessionId").asText()), null, uniqueIp());
+        UUID planId = generatePlan(completeSurvey(createSurveySession().path("sessionId").asText()), null, uniqueIp());
+        // Generation is asynchronous, so the plan must reach READY before it counts as "created".
+        awaitPlanReady(planId);
 
         JsonNode cached = json(mockMvc.perform(get("/api/homepage/stats"))
                 .andExpect(status().isOk())

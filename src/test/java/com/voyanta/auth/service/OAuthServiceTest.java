@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 
 import java.util.Map;
 import java.util.Optional;
@@ -23,7 +24,10 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -70,5 +74,70 @@ class OAuthServiceTest {
                 .isInstanceOf(ApiException.class)
                 .extracting(ex -> ((ApiException) ex).getErrorCode())
                 .isEqualTo("UNKNOWN_PROVIDER");
+    }
+
+    @Test
+    void providerOutageIsPropagatedAsServiceUnavailableNotUnauthorized() {
+        // Google JWKS endpoint-i əlçatan deyildirsə, verifier 503 atır. Bu, dəqiq
+        // məqsədlə 401 OLMAMALIDIR — əks halda "giriş təsdiqlənmədi" mesajı
+        // çıxar və istifadəçi öz səhvinə inanardı.
+        when(googleVerifier.verify("token")).thenThrow(new ApiException(
+                HttpStatus.SERVICE_UNAVAILABLE, "OAUTH_PROVIDER_UNAVAILABLE", "Giriş xidməti hazır deyil"));
+
+        assertThatThrownBy(() -> oAuthService.login("google", new OAuthLoginRequest("token")))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> {
+                    ApiException api = (ApiException) ex;
+                    assertThat(api.getStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                    assertThat(api.getErrorCode()).isEqualTo("OAUTH_PROVIDER_UNAVAILABLE");
+                });
+
+        verifyNoInteractions(userRepository, authService);
+    }
+
+    @Test
+    void invalidTokenFromVerifierIsNotSwallowed() {
+        when(googleVerifier.verify("token")).thenThrow(new ApiException(
+                HttpStatus.UNAUTHORIZED, "INVALID_OAUTH_TOKEN", "OAuth token doğrulanmadı"));
+
+        assertThatThrownBy(() -> oAuthService.login("google", new OAuthLoginRequest("token")))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+
+        verifyNoInteractions(userRepository, authService);
+    }
+
+    @Test
+    void loginNeverCallsTheAiProvider() {
+        // Guard for the architecture: OAuthService has no AiPlanGenerator dependency at
+        // all, so an AI outage cannot reach the login path even in principle.
+        when(googleVerifier.verify("token")).thenReturn(new VerifiedOidcUser("sub", "arch@voyanta.test", "Arch"));
+        when(userRepository.findByEmail("arch@voyanta.test")).thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setId(UUID.randomUUID());
+            return user;
+        });
+        when(authService.issueTokens(any(User.class)))
+                .thenReturn(new AuthResponse("a", "r", new UserSummary(UUID.randomUUID(), "Arch", "arch@voyanta.test")));
+
+        assertThat(oAuthService.login("google", new OAuthLoginRequest("token")).accessToken()).isEqualTo("a");
+    }
+
+    @Test
+    void existingUserIsReusedAndNoTokensAreIssuedForUnknownEmail() {
+        when(googleVerifier.verify("token")).thenReturn(new VerifiedOidcUser("sub", "known@voyanta.test", "Known"));
+        when(userRepository.findByEmail("known@voyanta.test")).thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setId(UUID.randomUUID());
+            return user;
+        });
+        when(authService.issueTokens(any(User.class)))
+                .thenReturn(new AuthResponse("a", "r", new UserSummary(UUID.randomUUID(), "Known", "known@voyanta.test")));
+
+        oAuthService.login("google", new OAuthLoginRequest("token"));
+
+        verify(userRepository, never()).save(argThat(saved -> saved.getEmail() == null));
     }
 }

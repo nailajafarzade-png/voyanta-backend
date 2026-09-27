@@ -13,6 +13,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Replaces the real OpenAI/Gemini client in tests so plan generation never spends API credits.
+ *
+ * It also delegates to {@link SlowAiPlanGenerator} so a test can hold the AI call open
+ * and prove that POST /api/plans/generate does not block on it.
  */
 @Component
 @Primary
@@ -23,6 +26,9 @@ public class FakeAiPlanGenerator implements AiPlanGenerator {
 
     @Override
     public AiResponse generate(AiRequest request) {
+        // No-op unless a test explicitly asked to hold this call open.
+        SlowAiPlanGenerator.beforeGenerate();
+
         if (fail.get()) {
             throw new IllegalStateException("Forced AI failure for tests");
         }
@@ -41,6 +47,7 @@ public class FakeAiPlanGenerator implements AiPlanGenerator {
     public void reset() {
         fail.set(false);
         nextResponse.set(defaultPlan());
+        SlowAiPlanGenerator.reset();
     }
 
     public static AiResponse defaultPlan() {

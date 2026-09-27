@@ -1,17 +1,22 @@
 package com.voyanta.plan.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.voyanta.plan.dao.entity.ItineraryDay;
 import com.voyanta.plan.dao.entity.TravelPlan;
 import com.voyanta.plan.dao.repository.TravelPlanRepository;
 import com.voyanta.plan.dto.response.PlanResponse;
+import com.voyanta.plan.dto.response.PlanStatusResponse;
 import com.voyanta.plan.dto.shared.ItineraryItem;
+import com.voyanta.plan.enums.GenerationStage;
 import com.voyanta.plan.enums.PlanStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
 import java.util.List;
 import java.util.Optional;
@@ -27,6 +32,10 @@ class PlanQueryServiceTest {
     private TravelPlanRepository planRepository;
     @Mock
     private RedisTemplate<String, Object> redisTemplate;
+    @Mock
+    private ValueOperations<String, Object> valueOperations;
+    @Spy
+    private ObjectMapper objectMapper = new ObjectMapper();
     @InjectMocks
     private PlanQueryService queryService;
 
@@ -61,5 +70,97 @@ class PlanQueryServiceTest {
         PlanResponse visible = queryService.getPlan(planId, ownerId);
         assertThat(visible.days().get(1).locked()).isFalse();
         assertThat(visible.days().get(1).items()).isNotNull();
+    }
+
+    // ------------------------------------------------------------------
+    // Regression test for a real production bug: the progress stage is stored in Redis
+    // via GenericJackson2JsonRedisSerializer, so it comes back as a plain String, not as
+    // a GenerationStage. A direct cast threw ClassCastException and GET /api/plans/{id}/status
+    // returned 500 while a plan was generating - which is the normal state, since the
+    // frontend polls the status endpoint throughout generation.
+    // ------------------------------------------------------------------
+
+    @Test
+    void statusConvertsStringStageFromRedisWithoutClassCastException() {
+        UUID planId = UUID.randomUUID();
+        TravelPlan plan = TravelPlan.builder()
+                .id(planId)
+                .status(PlanStatus.GENERATING)
+                .build();
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+        // Redis-dən qayıdan tipik JSON deserialize nəticəsi.
+        when(valueOperations.get("plan:progress:" + planId)).thenReturn("SELECTING_PLACES");
+
+        PlanStatusResponse status = queryService.getStatus(planId);
+
+        assertThat(status.status()).isEqualTo(PlanStatus.GENERATING);
+        assertThat(status.stage()).isEqualTo(GenerationStage.SELECTING_PLACES);
+        assertThat(status.message()).isNotBlank();
+    }
+
+    @Test
+    void statusToleratesMissingOrUnreadableStage() {
+        UUID planId = UUID.randomUUID();
+        TravelPlan plan = TravelPlan.builder()
+                .id(planId)
+                .status(PlanStatus.GENERATING)
+                .build();
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+        // Redis key-i yoxdur (TTL bitib və ya hələ yazılmayıb).
+        when(valueOperations.get("plan:progress:" + planId)).thenReturn(null);
+        assertThat(queryService.getStatus(planId).stage()).isNull();
+        assertThat(queryService.getStatus(planId).message()).isNotBlank();
+    }
+
+    @Test
+    void statusDegradesSafelyWhenRedisHoldsAnUnknownStageValue() {
+        // Rollover case: a stage enum constant was renamed/removed in a deploy while an
+        // old value is still cached. The status endpoint must degrade to a generic
+        // "still preparing" message instead of returning 500 to a polling client.
+        UUID planId = UUID.randomUUID();
+        TravelPlan plan = TravelPlan.builder()
+                .id(planId)
+                .status(PlanStatus.GENERATING)
+                .build();
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get("plan:progress:" + planId)).thenReturn("SOME_REMOVED_STAGE");
+
+        PlanStatusResponse status = queryService.getStatus(planId);
+
+        assertThat(status.status()).isEqualTo(PlanStatus.GENERATING);
+        assertThat(status.stage()).isNull();
+        assertThat(status.message()).isEqualTo("Plan hazırlanır...");
+    }
+
+    @Test
+    void statusIgnoresRedisForTerminalPlans() {
+        // READY/FAILED plans short-circuit before touching Redis, so a missing or
+        // corrupt progress key cannot affect the final message.
+        UUID planId = UUID.randomUUID();
+        TravelPlan ready = TravelPlan.builder().id(planId).status(PlanStatus.READY).build();
+        when(planRepository.findById(planId)).thenReturn(Optional.of(ready));
+
+        PlanStatusResponse status = queryService.getStatus(planId);
+
+        assertThat(status.status()).isEqualTo(PlanStatus.READY);
+        assertThat(status.stage()).isNull();
+        assertThat(status.message()).isEqualTo("Planın hazırdır");
+    }
+
+    @Test
+    void statusReportsFailedPlansWithAFailureMessage() {
+        UUID planId = UUID.randomUUID();
+        TravelPlan failed = TravelPlan.builder().id(planId).status(PlanStatus.FAILED).build();
+        when(planRepository.findById(planId)).thenReturn(Optional.of(failed));
+
+        PlanStatusResponse status = queryService.getStatus(planId);
+
+        assertThat(status.status()).isEqualTo(PlanStatus.FAILED);
+        assertThat(status.message()).isEqualTo("Plan hazırlanarkən xəta baş verdi");
     }
 }
