@@ -30,6 +30,7 @@ public class VoyantaProperties {
     private RateLimit rateLimit = new RateLimit();
     private Storage storage = new Storage();
     private OAuth oauth = new OAuth();
+    private Unsplash unsplash = new Unsplash();
     private Homepage homepage = new Homepage();
     private Cors cors = new Cors();
 
@@ -102,6 +103,33 @@ public class VoyantaProperties {
         public static class Apple {
             private String clientId;
         }
+    }
+
+    /**
+     * Holds the Unsplash (image provider) settings. The access key is read from the
+     * UNSPLASH_ACCESS_KEY environment variable and stays on the backend: it is only ever
+     * sent as an "Authorization: Client-ID" header and is never part of an API response.
+     */
+    @Getter
+    @Setter
+    public static class Unsplash {
+        private String accessKey;
+        private String baseUrl;
+        private String searchPath;
+
+        // Search tuning: "landscape" is what the destination cards need, and
+        // content_filter=high keeps explicit/low-quality results out.
+        private String orientation;
+        private String contentFilter;
+        private int perPage;
+
+        private Duration timeout;
+
+        // How long a resolved destination image stays in Redis, and how long a
+        // "this destination has no image" negative result is remembered (shorter,
+        // so a destination that gains photos later is picked up again).
+        private Duration cacheTtl;
+        private Duration negativeCacheTtl;
     }
 
     /** Holds the homepage values: the displayed average rating and how long homepage stats are cached. */

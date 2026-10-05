@@ -1,6 +1,9 @@
 package com.voyanta.plan.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.voyanta.image.DestinationImageQuery;
+import com.voyanta.image.ImageService;
+import com.voyanta.image.dto.response.ImageCandidateResponse;
 import com.voyanta.plan.dao.entity.ItineraryDay;
 import com.voyanta.plan.dao.entity.TravelPlan;
 import com.voyanta.plan.dao.repository.TravelPlanRepository;
@@ -9,8 +12,10 @@ import com.voyanta.plan.dto.response.PlanStatusResponse;
 import com.voyanta.plan.dto.shared.ItineraryItem;
 import com.voyanta.plan.enums.GenerationStage;
 import com.voyanta.plan.enums.PlanStatus;
+import com.voyanta.survey.enums.InterestType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -20,9 +25,12 @@ import org.springframework.data.redis.core.ValueOperations;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,6 +42,8 @@ class PlanQueryServiceTest {
     private RedisTemplate<String, Object> redisTemplate;
     @Mock
     private ValueOperations<String, Object> valueOperations;
+    @Mock
+    private ImageService imageService;
     @Spy
     private ObjectMapper objectMapper = new ObjectMapper();
     @InjectMocks
@@ -70,6 +80,61 @@ class PlanQueryServiceTest {
         PlanResponse visible = queryService.getPlan(planId, ownerId);
         assertThat(visible.days().get(1).locked()).isFalse();
         assertThat(visible.days().get(1).items()).isNotNull();
+    }
+
+    // ------------------------------------------------------------------
+    // AI plan image path: the plan cover uses the SAME multi-candidate image
+    // layer as the destination cards. AI generation itself is untouched.
+    // ------------------------------------------------------------------
+
+    @Test
+    void planCoverUsesTheFirstCandidateAndExposesTheWholeList() {
+        UUID planId = UUID.randomUUID();
+        TravelPlan plan = TravelPlan.builder()
+                .id(planId)
+                .destination("Greenland")
+                .interests(Set.of(InterestType.NATURE))
+                .status(PlanStatus.READY)
+                .days(List.of())
+                .build();
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+
+        List<ImageCandidateResponse> candidates = List.of(
+                new ImageCandidateResponse("a", "https://images.unsplash.com/a", "https://images.unsplash.com/a-full",
+                        "Jane", "https://unsplash.com/@jane", "https://unsplash.com/photos/a"),
+                new ImageCandidateResponse("b", "https://images.unsplash.com/b", "https://images.unsplash.com/b-full",
+                        "John", "https://unsplash.com/@john", "https://unsplash.com/photos/b"));
+        when(imageService.resolveImageCandidates(any())).thenReturn(candidates);
+
+        PlanResponse response = queryService.getPlan(planId, null);
+
+        assertThat(response.imageUrl()).isEqualTo("https://images.unsplash.com/a");
+        assertThat(response.images()).hasSize(2);
+
+        // The plan's own interests must reach the query so nature plans search
+        // for landscapes instead of a generic photo.
+        ArgumentCaptor<DestinationImageQuery> query = ArgumentCaptor.forClass(DestinationImageQuery.class);
+        verify(imageService).resolveImageCandidates(query.capture());
+        assertThat(query.getValue().destination()).isEqualTo("Greenland");
+        assertThat(query.getValue().interests()).containsExactly(InterestType.NATURE);
+    }
+
+    @Test
+    void planWithoutAnyImageCandidateHasNoCoverAndEmptyList() {
+        UUID planId = UUID.randomUUID();
+        TravelPlan plan = TravelPlan.builder()
+                .id(planId)
+                .destination("Nowhere At All")
+                .status(PlanStatus.READY)
+                .days(List.of())
+                .build();
+        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+        when(imageService.resolveImageCandidates(any())).thenReturn(List.of());
+
+        PlanResponse response = queryService.getPlan(planId, null);
+
+        assertThat(response.imageUrl()).isNull();
+        assertThat(response.images()).isEmpty();
     }
 
     // ------------------------------------------------------------------

@@ -41,6 +41,18 @@ voyanta:
     access-key: ""
     secret-key: ""
     region: auto
+  # Boş açar = testlər real Unsplash-a getmir və şəkil axını null qaytarır,
+  # yəni plan generasiyası testləri şəbəkədən asılı olmur.
+  unsplash:
+    access-key: ""
+    base-url: http://127.0.0.1:9
+    search-path: /search/photos
+    orientation: landscape
+    content-filter: high
+    per-page: 10
+    timeout: 2s
+    cache-ttl: 30d
+    negative-cache-ttl: 6h
   oauth:
     google:
       client-id: ""

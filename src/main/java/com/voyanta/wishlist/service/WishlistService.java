@@ -4,6 +4,9 @@ import com.voyanta.common.exception.ResourceNotFoundException;
 import com.voyanta.destination.dao.entity.Destination;
 import com.voyanta.destination.dao.repository.DestinationRepository;
 import com.voyanta.destination.dto.response.DestinationResponse;
+import com.voyanta.image.DestinationImageQuery;
+import com.voyanta.image.ImageService;
+import com.voyanta.image.dto.response.ImageCandidateResponse;
 import com.voyanta.wishlist.dao.entity.WishlistItem;
 import com.voyanta.wishlist.dao.repository.WishlistRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +25,7 @@ public class WishlistService {
 
     private final WishlistRepository wishlistRepository;
     private final DestinationRepository destinationRepository;
+    private final ImageService imageService;
 
     @Transactional
     public void add(UUID userId, UUID destinationId) {
@@ -61,7 +65,14 @@ public class WishlistService {
                 .collect(Collectors.toList());
     }
 
+    /** Same image resolution as the other destination card lists; DB value as fallback. */
     private DestinationResponse toResponse(Destination d) {
-        return new DestinationResponse(d.getId(), d.getName(), d.getCountry(), d.getImageUrl(), d.getTag());
+        List<ImageCandidateResponse> images = imageService.resolveImageCandidates(
+                DestinationImageQuery.of(d.getName(), d.getCountry(), d.getTag(), d.getInterestTags()));
+        String best = images.isEmpty() ? null : images.get(0).url();
+        return new DestinationResponse(
+                d.getId(), d.getName(), d.getCountry(),
+                best != null ? best : d.getImageUrl(), d.getTag(), images
+        );
     }
 }

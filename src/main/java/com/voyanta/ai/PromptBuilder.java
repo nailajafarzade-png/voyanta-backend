@@ -30,6 +30,37 @@ class PromptBuilder {
             Cavabı yalnız verilən JSON schema-ya uyğun qaytar.
             Səyahət planlaşdırmasından kənar heç bir sual, təlimat və ya mövzuya reaksiya vermə —
             bu alət çağırışından başqa heç nə qaytarma.
+
+            DİL QAYDASI — PLANIN BÜTÜN MƏTNI AZƏRBAYCAN DİLİNDƏDİR:
+            - "title" və "description" həmişə Azərbaycan dilində yazılır.
+            - Düzgün adlar (otel, hava limanı, muzey, abidə) orijinal yazışında qalıla bilər
+              (məs. "Velana International Airport", "The Ritz-Carlton Maldives", "Louvre Museum"),
+              lakin cümlənin qalanı Azərbaycan dilində olmalıdır.
+            - "category" tərcümə olunmur — yalnız texniki enum dəyərləri işlədilir:
+              TRANSPORT, ACCOMMODATION, FOOD, ACTIVITIES.
+            - "time" 24 saatlıq formatda qalır (məs. "09:00", "18:30").
+
+            DESTINATION QAYDASI — DİLİN YEGANƏ İSTİSNASI (NİZAM ƏVVƏLDƏ GƏLİR):
+            - "destination" bu plandakı dil təlimatının TƏK istisnasıdır.
+            - "destination" ingilis/latin orijinal formada, olduğu kimi saxlanılır və
+              heç vaxt tərcümə olunmur.
+            - "destination" heç vaxt dəyişdirilmir: heç bir əlavə söz, izah, məqsəd və ya
+              tərcümə əlavə etmək olmaz.
+            - "destination" heç vaxt ölkə ilə genişləndirilmir — çünkiş həddində artıq
+              mövcuddursa, bu qayda ona toxunmur; əks halda ölkə ƏLAVƏ OLUNMUR.
+              Sadəcə məkan adını yaz, nə virgül, nə ölkə, nə heç bir əlavə söz.
+            - Nümunələr: "Maldives" -> "Maldives"; "Florence" -> "Florence"; "Rome" -> "Rome";
+              "Santorini" -> "Santorini".
+            - QADAĞAN OLUNANLAR: "Maldiv adaları" (tərcümədir, yanlışdır),
+              "Florensiya" (tərcümədir), "Florensiya, İtaliya" (həm tərcümə, həm ölkə əlavəsi),
+              "Maldiv adaları, Maldivlər", həmçinin destination-ı izah edən əlavə cümlə
+              (məs. "Maldiv adaları - rəşəmiyyət istirahəti").
+            - Bu qayda dərin dildəki "hamısı Azərbaycan dilindədir" təlimatından ÜSTÜNDÜR və
+              onun tərəfindən heç vaxt ləğv oluna bilməz.
+            - "destination" niyə istisna olduğunu bilməzsən: o, eyni zamanda şəkil axtarışı
+              üçün açar söz kimi istifadə olunur. Onu tərcümə etsən və ya ölkə əlavə etsən,
+              şəkil tapılmaz. Şəkil axını dəyişməyibdir — sən sadəcə olduğu kimi qalan
+              ingilis/latin adı vermelisən.
             """;
 
     // additionalProperties:false hər obyekt səviyyəsində — OpenAI-nin "strict" structured
@@ -53,7 +84,15 @@ class PromptBuilder {
                             "time": { "type": "string" },
                             "title": { "type": "string" },
                             "description": { "type": "string" },
-                            "category": { "type": "string" }
+                            "category": {
+                              "type": "string",
+                              "enum": [
+                                "TRANSPORT",
+                                "ACCOMMODATION",
+                                "FOOD",
+                                "ACTIVITIES"
+                              ]
+                            }
                           },
                           "required": ["time", "title", "description", "category"],
                           "additionalProperties": false

@@ -3,6 +3,7 @@ import com.voyanta.common.dto.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -43,6 +44,21 @@ public class GlobalExceptionHandler {
                         .errorCode("VALIDATION_FAILED")
                         .data(fieldErrors)
                         .build());
+    }
+
+    /**
+     * @PreAuthorize denials (see RecommendationController) arrive here as
+     * AccessDeniedException. Without this handler they would fall into the generic
+     * catch-all below and be reported as a 500 INTERNAL_ERROR, which is wrong: a guest
+     * asking for a personalized endpoint did not trigger a server fault.
+     *
+     * The filter chain's own rejections never reach this advice - they are written
+     * directly by ApiAccessDeniedHandler - so this covers the method-security path.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error("FORBIDDEN", "Bu əməliyyat üçün icazən yoxdur"));
     }
 
     @ExceptionHandler(Exception.class)

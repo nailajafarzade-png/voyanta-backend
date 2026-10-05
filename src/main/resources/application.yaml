@@ -75,6 +75,21 @@ voyanta:
     secret-key: ${STORAGE_SECRET_KEY:}
     region: ${STORAGE_REGION:auto}
 
+  # Destinasiya şəkilləri. AI hər hansı yeni milli/plugins hədəf seçə bilər
+  # (Greenland, Svalbard, Faroe Islands ...), ona görə əvvəlcədən şəkil siyahısı
+  # yoxdur — ad hər dəfə API-də axtarılır və nəticə Redis-də saxlanılır.
+  # DİQQƏT: access-key YALNIZ backend-də qalır, frontend-ə heç vaxt göndərilmir.
+  unsplash:
+    access-key: ${UNSPLASH_ACCESS_KEY:}
+    base-url: https://api.unsplash.com
+    search-path: /search/photos
+    orientation: landscape
+    content-filter: high
+    per-page: 10
+    timeout: 5s
+    cache-ttl: 30d              # tapılmış şəkil — aylarla keçərlidir
+    negative-cache-ttl: 6h      # "şəkil yoxdur" nəticəsi tezliklə yenilənir
+
   oauth:
     google:
       client-id: ${GOOGLE_CLIENT_ID:}

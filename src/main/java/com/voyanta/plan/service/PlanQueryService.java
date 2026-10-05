@@ -2,6 +2,9 @@ package com.voyanta.plan.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.voyanta.common.exception.ResourceNotFoundException;
+import com.voyanta.image.DestinationImageQuery;
+import com.voyanta.image.ImageService;
+import com.voyanta.image.dto.response.ImageCandidateResponse;
 import com.voyanta.plan.dao.entity.ItineraryDay;
 import com.voyanta.plan.dao.entity.TravelPlan;
 import com.voyanta.plan.dao.repository.TravelPlanRepository;
@@ -37,6 +40,7 @@ public class PlanQueryService {
     private final TravelPlanRepository planRepository;
     private final RedisTemplate<String, Object> redisTemplate;
     private final ObjectMapper objectMapper;
+    private final ImageService imageService;
 
     public PlanStatusResponse getStatus(UUID planId) {
         TravelPlan plan = findPlan(planId);
@@ -88,10 +92,42 @@ public class PlanQueryService {
                 .map(day -> toDayResponse(day, canSeeAll))
                 .collect(Collectors.toList());
 
+        List<ImageCandidateResponse> images = resolveImages(plan);
+        // images boşdursa cover = null: bu, plan üçün heç bir DB sütunu yoxdur,
+        // response non_null ilə seriya olunanda sadəcə sahə olmur.
+        String cover = images.isEmpty() ? null : images.get(0).url();
+
         return new PlanResponse(
-                plan.getId(), plan.getDestination(), plan.getStartDate(), plan.getEndDate(),
+                plan.getId(), plan.getDestination(), cover, images,
+                plan.getStartDate(), plan.getEndDate(),
                 plan.getCompanion(), plan.getBudgetSummary(), plan.getStatus(), days
         );
+    }
+
+    /**
+     * Destination cover image candidates for the plan card.
+     *
+     * The plan has exactly ONE destination (TravelPlan.destination), so this resolves
+     * that single name; the itinerary days below it are activities, not destinations.
+     *
+     * <p>Keçmişdə TƏK URL qaytarılırdı. İndi bütün relevant namizədlər qaytarılır ki,
+     * frontend tam ekran baxış üçün seçim təklif edə bilsin. AI generasiyası bu
+     * axının bir hissəsi DEYİL — dəyişən yalnız şəkil qatıdır.
+     *
+     * ImageService never throws - a missing image simply yields an empty list here, the
+     * same value a GENERATING plan already returns for other not-yet-set fields, and the
+     * response is serialized with non_null inclusion so the field is simply absent.
+     */
+    private List<ImageCandidateResponse> resolveImages(TravelPlan plan) {
+        String destination = plan.getDestination();
+        if (destination == null || destination.isBlank()) {
+            return List.of();
+        }
+        // Sorğunu yalnız adla qurmaq əvvəl zəif idi ("Kahire" -> ümumi şəkil).
+        // Planın öz maraq teqləri varsa (təbiət/dəniz/tarix), onu da keçirik:
+        // beləcə plan örtüyü də eyni ağıllı seçimdən keçir.
+        return imageService.resolveImageCandidates(
+                DestinationImageQuery.of(destination, null, null, plan.getInterests()));
     }
 
     private ItineraryDayResponse toDayResponse(ItineraryDay day, boolean canSeeAll) {
