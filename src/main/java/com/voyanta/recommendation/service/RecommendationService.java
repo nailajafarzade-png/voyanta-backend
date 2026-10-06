@@ -57,6 +57,9 @@ public class RecommendationService {
 
     private static final int MAX_RESULTS = 6;
 
+    /** Auto-created plan destinations ("Səyahət planı") never appear on the home page. */
+    private static final String PLAN_TAG = "Səyahət planı";
+
     /** A wishlist row created within this many days counts as "current" interest. */
     static final int TRENDING_WINDOW_DAYS = 30;
 
@@ -178,7 +181,9 @@ public class RecommendationService {
     @Transactional(readOnly = true)
     public List<DestinationResponse> getTrending(Integer limit, Set<UUID> excludeIds) {
         int effectiveLimit = limit != null && limit > 0 ? limit : MAX_RESULTS;
-        List<Destination> candidates = destinationRepository.findAll();
+        List<Destination> candidates = destinationRepository.findAll().stream()
+                .filter(d -> !PLAN_TAG.equals(d.getTag()))
+                .toList();
         if (candidates.isEmpty()) {
             return List.of();
         }
@@ -217,7 +222,9 @@ public class RecommendationService {
     @Transactional(readOnly = true)
     public List<DestinationResponse> getPopular(Integer limit, Set<UUID> excludeIds) {
         int effectiveLimit = limit != null && limit > 0 ? limit : MAX_RESULTS;
-        List<Destination> candidates = destinationRepository.findAll();
+        List<Destination> candidates = destinationRepository.findAll().stream()
+                .filter(d -> !PLAN_TAG.equals(d.getTag()))
+                .toList();
         if (candidates.isEmpty()) {
             return List.of();
         }

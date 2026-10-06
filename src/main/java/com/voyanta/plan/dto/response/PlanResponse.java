@@ -25,6 +25,7 @@ import java.util.UUID;
 public record PlanResponse(
         UUID id,
         String destination,
+        UUID destinationId,
         String imageUrl,
         List<ImageCandidateResponse> images,
         LocalDate startDate,

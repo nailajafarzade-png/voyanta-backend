@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -25,6 +26,36 @@ public class DestinationService {
     @Transactional(readOnly = true)
     public List<DestinationResponse> getFeatured(Integer limit) {
         Stream<DestinationResponse> stream = destinationRepository.findByFeaturedTrue().stream()
+                .map(this::toResponse);
+
+        if (limit != null) {
+            stream = stream.limit(limit);
+        }
+
+        return stream.collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public DestinationResponse getById(UUID id) {
+        return destinationRepository.findById(id)
+                .map(this::toResponse)
+                .orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DestinationResponse> getByIds(List<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return destinationRepository.findAllById(ids).stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<DestinationResponse> getBySeason(String season, Integer limit) {
+        Stream<DestinationResponse> stream = destinationRepository.findAll().stream()
+                .filter(d -> season.equalsIgnoreCase(d.getSeason()))
                 .map(this::toResponse);
 
         if (limit != null) {

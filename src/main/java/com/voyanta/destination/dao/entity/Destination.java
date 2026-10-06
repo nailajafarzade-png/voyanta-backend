@@ -54,6 +54,9 @@ public class Destination {
     @Builder.Default
     private boolean featured = false;
 
+    @Column
+    private String season;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 

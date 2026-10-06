@@ -2,6 +2,8 @@ package com.voyanta.plan.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.voyanta.common.exception.ResourceNotFoundException;
+import com.voyanta.destination.dao.entity.Destination;
+import com.voyanta.destination.dao.repository.DestinationRepository;
 import com.voyanta.image.DestinationImageQuery;
 import com.voyanta.image.ImageService;
 import com.voyanta.image.dto.response.ImageCandidateResponse;
@@ -11,7 +13,6 @@ import com.voyanta.plan.dao.repository.TravelPlanRepository;
 import com.voyanta.plan.dto.response.ItineraryDayResponse;
 import com.voyanta.plan.dto.response.PlanResponse;
 import com.voyanta.plan.dto.response.PlanStatusResponse;
-
 import com.voyanta.plan.enums.GenerationStage;
 import com.voyanta.plan.enums.PlanStatus;
 
@@ -22,6 +23,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -41,6 +44,7 @@ public class PlanQueryService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final ObjectMapper objectMapper;
     private final ImageService imageService;
+    private final DestinationRepository destinationRepository;
 
     public PlanStatusResponse getStatus(UUID planId) {
         TravelPlan plan = findPlan(planId);
@@ -80,7 +84,7 @@ public class PlanQueryService {
         }
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public PlanResponse getPlan(UUID planId, UUID requestingUserId) {
         TravelPlan plan = findPlan(planId);
 
@@ -97,8 +101,10 @@ public class PlanQueryService {
         // response non_null ilə seriya olunanda sadəcə sahə olmur.
         String cover = images.isEmpty() ? null : images.get(0).url();
 
+        UUID destinationId = resolveDestinationId(plan, cover);
+
         return new PlanResponse(
-                plan.getId(), plan.getDestination(), cover, images,
+                plan.getId(), plan.getDestination(), destinationId, cover, images,
                 plan.getStartDate(), plan.getEndDate(),
                 plan.getCompanion(), plan.getBudgetSummary(), plan.getStatus(), days
         );
@@ -151,5 +157,27 @@ public class PlanQueryService {
             case BUILDING_ITINERARY -> "Gündəlik marşrut qurulur...";
             case DONE -> "Planın hazırdır";
         };
+    }
+
+    static final String PLAN_TAG = "Səyahət planı";
+
+    private UUID resolveDestinationId(TravelPlan plan, String cover) {
+        String raw = plan.getDestination();
+        if (raw == null || raw.isBlank()) return null;
+        String trimmed = raw.trim();
+        int comma = trimmed.indexOf(',');
+        String city = (comma > 0 ? trimmed.substring(0, comma) : trimmed).trim();
+        String country = comma > 0 ? trimmed.substring(comma + 1).trim() : "";
+        if (city.isEmpty() || city.length() > 100) return null;
+
+        Optional<Destination> existing = destinationRepository
+                .findFirstByNameIgnoreCaseOrderByCreatedAtAsc(trimmed)
+                .or(() -> destinationRepository.findFirstByNameIgnoreCaseOrderByCreatedAtAsc(city));
+        if (existing.isPresent()) return existing.get().getId();
+
+        if (plan.getStatus() != PlanStatus.READY || cover == null) return null;
+
+        return destinationRepository.save(Destination.builder()
+                .name(city).country(country).imageUrl(cover).tag(PLAN_TAG).build()).getId();
     }
 }

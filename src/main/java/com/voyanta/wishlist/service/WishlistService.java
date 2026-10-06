@@ -26,6 +26,8 @@ public class WishlistService {
     private final WishlistRepository wishlistRepository;
     private final DestinationRepository destinationRepository;
     private final ImageService imageService;
+    /** Same image resolution as the other destination card lists; DB value as fallback. */
+    private static final String PLAN_TAG = "Səyahət planı";
 
     @Transactional
     public void add(UUID userId, UUID destinationId) {
@@ -65,10 +67,20 @@ public class WishlistService {
                 .collect(Collectors.toList());
     }
 
+
+
     /** Same image resolution as the other destination card lists; DB value as fallback. */
     private DestinationResponse toResponse(Destination d) {
         List<ImageCandidateResponse> images = imageService.resolveImageCandidates(
                 DestinationImageQuery.of(d.getName(), d.getCountry(), d.getTag(), d.getInterestTags()));
+
+        // AI planından yaranan destinasiya: favoritdə planda göstərilən eyni şəkil çıxsın
+        if (PLAN_TAG.equals(d.getTag()) && d.getImageUrl() != null) {
+            return new DestinationResponse(
+                    d.getId(), d.getName(), d.getCountry(), d.getImageUrl(), d.getTag(), images
+            );
+        }
+
         String best = images.isEmpty() ? null : images.get(0).url();
         return new DestinationResponse(
                 d.getId(), d.getName(), d.getCountry(),

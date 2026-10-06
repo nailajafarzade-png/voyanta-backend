@@ -14,4 +14,6 @@ import java.util.UUID;
  */
 public interface DestinationRepository extends JpaRepository<Destination, UUID> {
     List<Destination> findByFeaturedTrue();
+    java.util.Optional<Destination> findByNameIgnoreCase(String name);
+    java.util.Optional<Destination> findFirstByNameIgnoreCaseOrderByCreatedAtAsc(String name);
 }
