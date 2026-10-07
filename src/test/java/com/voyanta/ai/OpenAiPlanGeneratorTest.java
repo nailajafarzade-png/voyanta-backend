@@ -1,5 +1,6 @@
 package com.voyanta.ai;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.voyanta.ai.dto.request.AiRequest;
 import com.voyanta.ai.dto.response.AiResponse;
@@ -359,6 +360,64 @@ class OpenAiPlanGeneratorTest {
 
         assertThat(server.takeRequest().getHeader("Authorization")).isEqualTo("Bearer sk-test");
         assertThat(server.takeRequest().getHeader("Authorization")).isEqualTo("Bearer sk-test");
+    }
+
+    /**
+     * The regression test for "the planner always returns the same destinations":
+     * the survey answers MUST reach the provider inside the user message, and two
+     * different answer combinations MUST produce two different prompts — otherwise
+     * the model can only ever anchor on whatever the system prompt mentions.
+     */
+    @Test
+    void differentSurveyAnswersProduceDifferentPromptsToTheProvider() throws Exception {
+        server.enqueue(okResponse());
+        server.enqueue(okResponse());
+
+        AiRequest beachTrip = new AiRequest(
+                Set.of(InterestType.SEA),
+                CompanionType.COUPLE,
+                null,
+                new Budget(BudgetTier.PREMIUM, null),
+                new TravelDates(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 10), null),
+                HotelType.FIVE_STAR,
+                MealPreference.ALL_INCLUSIVE,
+                Set.of(TripPurpose.HONEYMOON)
+        );
+        AiRequest mountainTrip = new AiRequest(
+                Set.of(InterestType.NATURE),
+                CompanionType.SOLO,
+                null,
+                new Budget(BudgetTier.ECONOMY, null),
+                new TravelDates(LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 3), null),
+                HotelType.THREE_STAR,
+                MealPreference.NO_MEALS,
+                Set.of(TripPurpose.ADVENTURE)
+        );
+
+        generator.generate(beachTrip);
+        generator.generate(mountainTrip);
+
+        String first = userMessageOf(server.takeRequest());
+        String second = userMessageOf(server.takeRequest());
+
+        assertThat(first)
+                .as("different answers must produce a different user message")
+                .isNotEqualTo(second)
+                .contains("SEA", "COUPLE", "PREMIUM", "FIVE_STAR", "ALL_INCLUSIVE", "HONEYMOON");
+        assertThat(second)
+                .contains("NATURE", "SOLO", "ECONOMY", "THREE_STAR", "NO_MEALS", "ADVENTURE");
+
+        // The system prompt must not name any concrete destination that could anchor
+        // the model onto the same few places regardless of the answers.
+        assertThat(PromptBuilder.SYSTEM_PROMPT)
+                .doesNotContainIgnoringCase("maldives", "maldiv", "santorini",
+                        "florence", "florensiya", "florida", "bali", "paris");
+    }
+
+    /** Extracts the user message (second chat message) from a recorded provider request. */
+    private static String userMessageOf(RecordedRequest request) throws IOException {
+        JsonNode body = new ObjectMapper().readTree(request.getBody().readUtf8());
+        return body.path("messages").path(1).path("content").asText();
     }
 
     private static MockResponse okResponse() {

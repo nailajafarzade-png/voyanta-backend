@@ -235,7 +235,8 @@ public class RecommendationService {
                 .map(d -> new ScoredDestination(d, scorer.popularScore(d, favorites)))
                 .sorted(byScoreThenName())
                 .toList();
-        return toResponses(selectWithDiversity(ranked, effectiveLimit, excludeIds));
+        // Homepage-only section: the frontend hardcodes these images, so no Unsplash call.
+        return toStoredImageResponses(selectWithDiversity(ranked, effectiveLimit, excludeIds));
     }
 
     // ------------------------------------------------------------------
@@ -391,6 +392,26 @@ public class RecommendationService {
 
     private List<DestinationResponse> toResponses(List<ScoredDestination> scored) {
         return scored.stream().map(s -> toResponse(s.destination())).collect(Collectors.toList());
+    }
+
+    /**
+     * Maps ranked destinations WITHOUT touching the image provider (Unsplash).
+     *
+     * <p>Used by {@link #getPopular} only: that section is served exclusively to the
+     * homepage, where the images are hardcoded in the frontend. The stored
+     * {@code image_url} is returned as-is and the candidate list stays empty, which the
+     * response serializer omits entirely (non_null inclusion).
+     */
+    private List<DestinationResponse> toStoredImageResponses(List<ScoredDestination> scored) {
+        return scored.stream()
+                .map(s -> new DestinationResponse(
+                        s.destination().getId(),
+                        s.destination().getName(),
+                        s.destination().getCountry(),
+                        s.destination().getImageUrl(),
+                        s.destination().getTag(),
+                        List.of()))
+                .collect(Collectors.toList());
     }
 
     private Map<UUID, Long> totalFavorites() {

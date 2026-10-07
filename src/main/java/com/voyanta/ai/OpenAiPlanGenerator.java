@@ -77,11 +77,17 @@ class OpenAiPlanGenerator implements AiPlanGenerator {
                     "AI servisi konfiqurasiya edilməyib");
         }
 
+        // İstifadəçinin cavabları prompt-a düzgün düşürmü — bunu DEBUG səviyyəsində
+        // görmək olar. Heç bir gizli yox alternativ cavab yoxdur: provider xətası
+        // planı FAILED edir və yuxarıda error olaraq loglanır.
+        String userMessage = promptBuilder.buildUserMessage(request);
+        log.debug("AI plan sorğusunun istifadəçi mesajı: {}", userMessage);
+
         Map<String, Object> requestBody = Map.of(
                 "model", properties.getAi().getModel(),
                 "messages", List.of(
                         Map.of("role", "system", "content", PromptBuilder.SYSTEM_PROMPT),
-                        Map.of("role", "user", "content", promptBuilder.buildUserMessage(request))
+                        Map.of("role", "user", "content", userMessage)
                 ),
                 "response_format", Map.of(
                         "type", "json_schema",
@@ -214,6 +220,9 @@ class OpenAiPlanGenerator implements AiPlanGenerator {
             // Anthropic-in tool_use.input-undan fərqli olaraq, əlavə parse addımı lazımdır.
             return objectMapper.readValue(content, AiResponse.class);
         } catch (Exception e) {
+            // Parse səssiz baş verə bilməz: boş/gözlənilmən cavab gələndə nəyin
+            // gəldiyi logda görünür ki, belə problem gizlənməsin.
+            log.error("AI cavabı AiResponse-a çevrilmədi. Cavab: {}", truncate(content), e);
             throw new ApiException(HttpStatus.BAD_GATEWAY, "AI_PARSE_ERROR", "AI cavabı parse olunmadı");
         }
     }

@@ -16,7 +16,9 @@ class DestinationIT extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn()).path("data");
         assertThat(data.isArray()).isTrue();
-        assertThat(data.size()).isEqualTo(4);
+        // The catalogue has grown beyond the original four seeded rows — the contract
+        // is "featured comes from the database", not a fixed count.
+        assertThat(data.size()).isGreaterThanOrEqualTo(4);
         assertThat(data.get(0).path("name").asText()).isNotBlank();
         assertThat(data.get(0).path("country").asText()).isNotBlank();
         assertThat(data.get(0).path("imageUrl").asText()).isNotBlank();

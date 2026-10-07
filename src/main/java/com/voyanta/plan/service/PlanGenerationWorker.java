@@ -85,6 +85,11 @@ public class PlanGenerationWorker {
     private void applyAiResponse(UUID planId, AiResponse response, boolean isAuthenticated) {
         TravelPlan plan = planRepository.findById(planId).orElseThrow();
 
+        // Hansı destinasiyanın seçildiyini görünən edir: eyni yerlərin daim
+        // təkrarlanması kimi problemlər logdan izlənə bilər.
+        log.info("AI plan cavabı qəbul edildi: planId={}, destination={}",
+                planId, response.destination());
+
         plan.setDestination(response.destination());
         plan.setBudgetSummary(toBudgetSummary(response.budgetSummary()));
 

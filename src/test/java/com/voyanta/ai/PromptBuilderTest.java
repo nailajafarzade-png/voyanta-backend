@@ -43,6 +43,77 @@ class PromptBuilderTest {
         assertThat(message).contains("FOUR_STAR").contains("BREAKFAST_INCLUDED").contains("RELAXATION");
     }
 
+    /**
+     * Regression test for "the planner ignores my answers": the user message is the
+     * ONLY place the survey answers reach the model, so two different answer
+     * combinations must yield two different messages containing their own values.
+     */
+    @Test
+    void differentAnswerCombinationsProduceDifferentUserMessages() {
+        AiRequest seaFamily = new AiRequest(
+                Set.of(InterestType.SEA),
+                CompanionType.FAMILY,
+                new FamilyDetails(2, 1),
+                new Budget(BudgetTier.PREMIUM, null),
+                new TravelDates(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 10), null),
+                HotelType.FIVE_STAR,
+                MealPreference.ALL_INCLUSIVE,
+                Set.of(TripPurpose.HONEYMOON)
+        );
+        AiRequest mountainsSolo = new AiRequest(
+                Set.of(InterestType.NATURE),
+                CompanionType.SOLO,
+                null,
+                new Budget(BudgetTier.ECONOMY, null),
+                new TravelDates(LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 3), null),
+                HotelType.THREE_STAR,
+                MealPreference.NO_MEALS,
+                Set.of(TripPurpose.ADVENTURE)
+        );
+
+        String first = promptBuilder.buildUserMessage(seaFamily);
+        String second = promptBuilder.buildUserMessage(mountainsSolo);
+
+        assertThat(first)
+                .as("different answers must produce a different user message")
+                .isNotEqualTo(second)
+                .contains("SEA", "FAMILY", "PREMIUM", "FIVE_STAR", "ALL_INCLUSIVE", "HONEYMOON");
+        assertThat(second)
+                .contains("NATURE", "SOLO", "ECONOMY", "THREE_STAR", "NO_MEALS", "ADVENTURE");
+    }
+
+    /** The frontend always sends a tier (CUSTOM + amount), so the amount must not be lost. */
+    @Test
+    void customBudgetAmountIsPartOfTheUserMessage() {
+        AiRequest request = new AiRequest(
+                Set.of(InterestType.SEA),
+                CompanionType.SOLO,
+                null,
+                new Budget(BudgetTier.CUSTOM, 750),
+                new TravelDates(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 5), null),
+                HotelType.BOUTIQUE,
+                MealPreference.BREAKFAST_INCLUDED,
+                Set.of(TripPurpose.RELAXATION)
+        );
+
+        assertThat(promptBuilder.buildUserMessage(request))
+                .contains("CUSTOM")
+                .contains("750");
+    }
+
+    /**
+     * Real destination names in the system prompt anchored the model: it kept
+     * returning those same places regardless of the answers. Examples, if needed,
+     * must be neutral.
+     */
+    @Test
+    void systemPromptContainsNoConcreteDestinationExamples() {
+        assertThat(PromptBuilder.SYSTEM_PROMPT)
+                .doesNotContainIgnoringCase(
+                        "maldives", "maldiv", "santorini", "florence", "florensiya",
+                        "florida", "rome", "bali", "paris");
+    }
+
     @Test
     void outputSchemaIsValidJsonObject() {
         Map<String, Object> schema = promptBuilder.outputSchema();

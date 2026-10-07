@@ -1,6 +1,8 @@
 package com.voyanta.plan.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.voyanta.destination.dao.entity.Destination;
+import com.voyanta.destination.dao.repository.DestinationRepository;
 import com.voyanta.image.DestinationImageQuery;
 import com.voyanta.image.ImageService;
 import com.voyanta.image.dto.response.ImageCandidateResponse;
@@ -44,6 +46,8 @@ class PlanQueryServiceTest {
     private ValueOperations<String, Object> valueOperations;
     @Mock
     private ImageService imageService;
+    @Mock
+    private DestinationRepository destinationRepository;
     @Spy
     private ObjectMapper objectMapper = new ObjectMapper();
     @InjectMocks
@@ -98,6 +102,13 @@ class PlanQueryServiceTest {
                 .days(List.of())
                 .build();
         when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+        // A READY plan auto-creates its destination row (resolveDestinationId) — the
+        // repository mock must hand back a persisted entity with an id.
+        when(destinationRepository.save(any())).thenAnswer(invocation -> {
+            Destination created = invocation.getArgument(0);
+            created.setId(UUID.randomUUID());
+            return created;
+        });
 
         List<ImageCandidateResponse> candidates = List.of(
                 new ImageCandidateResponse("a", "https://images.unsplash.com/a", "https://images.unsplash.com/a-full",

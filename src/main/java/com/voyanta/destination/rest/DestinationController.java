@@ -7,7 +7,6 @@ import com.voyanta.recommendation.service.RecommendationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -50,15 +49,6 @@ public class DestinationController {
             @RequestParam(required = false) Integer limit
     ) {
         return ResponseEntity.ok(ApiResponse.ok(destinationService.getFeatured(limit)));
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<DestinationResponse>> byId(@PathVariable UUID id) {
-        DestinationResponse response = destinationService.getById(id);
-        if (response == null) {
-            return ResponseEntity.ok(ApiResponse.ok(null));
-        }
-        return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
     @GetMapping("/batch")

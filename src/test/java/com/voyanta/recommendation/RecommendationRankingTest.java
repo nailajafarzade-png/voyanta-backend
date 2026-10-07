@@ -32,6 +32,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -503,6 +505,29 @@ class RecommendationRankingTest {
         assertThat(names(second).get(0))
                 .as("an already-shown destination must not be repeated first")
                 .isEqualTo("C");
+    }
+
+    // ==================================================================
+    // Homepage images are hardcoded in the frontend now — the popular
+    // section (served ONLY to the homepage) must not hit Unsplash.
+    // ==================================================================
+
+    @Test
+    void popularSectionDoesNotCallTheImageProvider() {
+        Destination popularA = given("Popular A", "X", "Dəniz", InterestType.SEA);
+        Destination popularB = given("Popular B", "Y", "Dəniz", InterestType.SEA);
+        catalogue(popularA, popularB);
+        favorites.put(popularA.getId(), 10L);
+        favorites.put(popularB.getId(), 5L);
+
+        List<DestinationResponse> result = service.getPopular(2, Set.of());
+
+        assertThat(result).hasSize(2);
+        verify(imageService, never()).resolveImageCandidates(any());
+        // The stored DB value is returned as-is; the candidate list stays empty.
+        assertThat(result.get(0).images()).isEmpty();
+        assertThat(result.get(0).imageUrl())
+                .isEqualTo("https://db/" + result.get(0).name() + ".jpg");
     }
 
     // ==================================================================

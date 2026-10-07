@@ -31,7 +31,21 @@ class RecommendationIT extends AbstractIntegrationTest {
                         withAuth(get("/api/recommendations/personalized").param("limit", "4"), auth.path("accessToken").asText()))
                 .andExpect(status().isOk())
                 .andReturn()).path("data");
-        assertThat(recommended.size()).isEqualTo(featured.size());
+        // A brand-new user has no activity, so personalized falls back to the featured
+        // catalogue. The response may be capped by `limit`, so every returned name must
+        // come from the featured list instead of comparing raw sizes.
+        List<String> featuredNames = new ArrayList<>();
+        featured.forEach(n -> featuredNames.add(n.path("name").asText()));
+        List<String> recommendedNames = new ArrayList<>();
+        recommended.forEach(n -> recommendedNames.add(n.path("name").asText()));
+        assertThat(recommendedNames)
+                .as("a new user's personalized list falls back to featured destinations")
+                .isNotEmpty()
+                .isSubsetOf(featuredNames);
+        // The request itself caps the list at 4; the response must honor that cap.
+        assertThat(recommended.size())
+                .as("the limit=4 request parameter is honored")
+                .isLessThanOrEqualTo(4);
     }
 
     @Test
